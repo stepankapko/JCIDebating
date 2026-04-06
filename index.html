@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>JCI Debating Duel</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="bg"></canvas>
+
+  <div id="app">
+    <!-- MAIN MENU -->
+    <section id="menu" class="screen active">
+      <header class="brand">
+        <div class="logo">JCI</div>
+        <h1>Debating Duel</h1>
+        <p class="tag">Train your voice. Sharpen your mind.</p>
+      </header>
+      <nav class="menu-buttons">
+        <button data-go="setup-single">Single Player</button>
+        <button data-go="setup-duel">Duel (2 Players)</button>
+        <button data-go="theory">Theory</button>
+        <button data-go="leaderboard">Leaderboard</button>
+        <button data-go="settings">Settings</button>
+      </nav>
+      <footer class="foot">JCI Branding Guidelines · Active Citizens</footer>
+    </section>
+
+    <!-- THEORY -->
+    <section id="theory" class="screen">
+      <button class="back" data-go="menu">&larr; Back</button>
+      <h2>How to Debate</h2>
+      <article class="theory-content">
+        <h3>The Core Rules</h3>
+        <ol>
+          <li><b>Clarity</b> — State your position in one clean sentence.</li>
+          <li><b>Evidence</b> — Back claims with facts, data or examples.</li>
+          <li><b>Logic</b> — Build arguments with cause &rarr; effect &rarr; impact.</li>
+          <li><b>Rebuttal</b> — Address the opponent's strongest point directly.</li>
+          <li><b>Delivery</b> — Confident, structured, respectful tone.</li>
+        </ol>
+        <h3>Structure of a Round (PREP)</h3>
+        <ul>
+          <li><b>P</b>oint — What do you claim?</li>
+          <li><b>R</b>eason — Why is it true?</li>
+          <li><b>E</b>xample — Show it in real life.</li>
+          <li><b>P</b>oint — Restate and drive it home.</li>
+        </ul>
+        <h3>JCI Spirit</h3>
+        <p>Debate with respect. The goal is truth and growth, not humiliation.
+        JCI members are Active Citizens — they listen, they learn, they lead.</p>
+        <h3>Scoring Criteria (used by the AI judge)</h3>
+        <ul>
+          <li>Argument strength (0–25)</li>
+          <li>Evidence &amp; examples (0–25)</li>
+          <li>Rebuttal &amp; engagement (0–25)</li>
+          <li>Delivery &amp; structure (0–25)</li>
+        </ul>
+      </article>
+    </section>
+
+    <!-- SETUP SINGLE -->
+    <section id="setup-single" class="screen">
+      <button class="back" data-go="menu">&larr; Back</button>
+      <h2>Single Player</h2>
+      <label>Your name <input id="s-name" type="text" placeholder="Name" /></label>
+      <label>Topic <input id="s-topic" type="text" placeholder="e.g. School uniforms should be mandatory" /></label>
+      <label>Your side
+        <select id="s-side"><option>FOR</option><option>AGAINST</option></select>
+      </label>
+      <label>Rounds
+        <select id="s-rounds"><option>1</option><option selected>2</option><option>3</option></select>
+      </label>
+      <button class="primary" id="start-single">Start Debate</button>
+    </section>
+
+    <!-- SETUP DUEL -->
+    <section id="setup-duel" class="screen">
+      <button class="back" data-go="menu">&larr; Back</button>
+      <h2>Duel on One Phone</h2>
+      <label>Player 1 <input id="d-p1" type="text" placeholder="Name (FOR)" /></label>
+      <label>Player 2 <input id="d-p2" type="text" placeholder="Name (AGAINST)" /></label>
+      <label>Topic <input id="d-topic" type="text" placeholder="Debate topic" /></label>
+      <label>Rounds
+        <select id="d-rounds"><option>1</option><option selected>2</option><option>3</option></select>
+      </label>
+      <button class="primary" id="start-duel">Start Duel</button>
+    </section>
+
+    <!-- GAME -->
+    <section id="game" class="screen">
+      <div class="game-header">
+        <div id="round-info">Round 1 / 2</div>
+        <div id="topic-info">Topic</div>
+      </div>
+      <div id="turn-card">
+        <h2 id="turn-player">Player</h2>
+        <p id="turn-side">FOR</p>
+        <p class="hint">Pass the phone. Tap ready when it's your turn.</p>
+        <button class="primary" id="ready-btn">Ready</button>
+      </div>
+      <div id="speak-card" class="hidden">
+        <h3 id="speak-player">Player</h3>
+        <p id="speak-side" class="side-badge">FOR</p>
+        <textarea id="speech" rows="8" placeholder="Type your argument..."></textarea>
+        <div class="row">
+          <span id="timer">02:00</span>
+          <button class="primary" id="submit-speech">Submit</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results" class="screen">
+      <h2>The Judge Has Spoken</h2>
+      <div id="verdict-loading" class="hidden">
+        <div class="spinner"></div>
+        <p>Claude is judging...</p>
+      </div>
+      <div id="verdict-content">
+        <div id="winner-banner"></div>
+        <div id="scores"></div>
+        <div id="feedback"></div>
+      </div>
+      <button class="primary" data-go="menu">Main Menu</button>
+    </section>
+
+    <!-- LEADERBOARD -->
+    <section id="leaderboard" class="screen">
+      <button class="back" data-go="menu">&larr; Back</button>
+      <h2>Leaderboard</h2>
+      <table id="lb-table">
+        <thead><tr><th>#</th><th>Name</th><th>Score</th><th>Topic</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button id="clear-lb">Clear Leaderboard</button>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="settings" class="screen">
+      <button class="back" data-go="menu">&larr; Back</button>
+      <h2>Settings</h2>
+      <label>Claude API Key
+        <input id="api-key" type="password" placeholder="sk-ant-..." />
+      </label>
+      <p class="hint">Stored locally on this device only. Used to call Claude as judge.</p>
+      <label>Model
+        <select id="model">
+          <option value="claude-opus-4-6">claude-opus-4-6</option>
+          <option value="claude-sonnet-4-6" selected>claude-sonnet-4-6</option>
+          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
+        </select>
+      </label>
+      <button class="primary" id="save-settings">Save</button>
+    </section>
+  </div>
+
+  <script type="importmap">
+  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module" src="bg.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
