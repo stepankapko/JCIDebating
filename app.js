@@ -11,20 +11,71 @@
   }
   document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
 
+  // --- Toast ---
+  function toast(msg, ms = 2200) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  // --- Random motions ---
+  const randomMotion = () => window.JCI_MOTIONS[Math.floor(Math.random() * window.JCI_MOTIONS.length)];
+  $('s-random').addEventListener('click', () => { $('s-topic').value = randomMotion(); });
+  $('d-random').addEventListener('click', () => { $('d-topic').value = randomMotion(); });
+
   // --- Settings ---
   function loadSettings() {
     $('api-key').value = localStorage.getItem('jci_api_key') || '';
     const m = localStorage.getItem('jci_model');
     if (m) $('model').value = m;
+    $('api-test-result').textContent = '';
   }
   $('save-settings').addEventListener('click', () => {
-    localStorage.setItem('jci_api_key', $('api-key').value.trim());
+    const k = $('api-key').value.trim();
+    localStorage.setItem('jci_api_key', k);
     localStorage.setItem('jci_model', $('model').value);
-    alert('Saved.');
-    go('menu');
+    toast(k ? 'Settings saved' : 'Saved (no key set)');
   });
 
-  // --- Leaderboard (localStorage "database") ---
+  $('test-api').addEventListener('click', async () => {
+    const result = $('api-test-result');
+    result.style.color = 'var(--muted)';
+    result.textContent = 'Testing...';
+    const k = $('api-key').value.trim() || localStorage.getItem('jci_api_key');
+    if (!k) { result.style.color = '#E63946'; result.textContent = 'No key entered.'; return; }
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': k,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: $('model').value,
+          max_tokens: 20,
+          messages: [{ role: 'user', content: 'Reply with just OK' }]
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        result.style.color = '#E63946';
+        result.textContent = `Failed: ${data.error?.message || res.status}`;
+        return;
+      }
+      result.style.color = '#4ADE80';
+      result.textContent = '✓ API key works!';
+      localStorage.setItem('jci_api_key', k);
+    } catch (e) {
+      result.style.color = '#E63946';
+      result.textContent = 'Network error: ' + e.message;
+    }
+  });
+
+  // --- Leaderboard (localStorage) ---
   function getLB() { return JSON.parse(localStorage.getItem('jci_lb') || '[]'); }
   function saveLB(entry) {
     const lb = getLB();
@@ -36,8 +87,8 @@
     const tbody = document.querySelector('#lb-table tbody');
     const lb = getLB();
     tbody.innerHTML = lb.length
-      ? lb.slice(0, 20).map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.name)}</td><td>${e.score}</td><td>${esc(e.topic || '')}</td></tr>`).join('')
-      : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No scores yet</td></tr>';
+      ? lb.slice(0, 20).map((e, i) => `<tr><td>${i + 1}</td><td>${esc(e.name)}</td><td><b>${e.score}</b></td><td>${esc((e.topic || '').slice(0, 40))}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">No scores yet</td></tr>';
   }
   $('clear-lb').addEventListener('click', () => {
     if (confirm('Clear all leaderboard entries?')) { localStorage.removeItem('jci_lb'); renderLeaderboard(); }
@@ -50,7 +101,7 @@
   $('start-single').addEventListener('click', () => {
     const name = $('s-name').value.trim() || 'Player';
     const topic = $('s-topic').value.trim();
-    if (!topic) return alert('Enter a topic.');
+    if (!topic) return toast('Enter or roll a motion.');
     const side = $('s-side').value;
     const rounds = parseInt($('s-rounds').value, 10);
     game = {
@@ -67,7 +118,7 @@
     const p1 = $('d-p1').value.trim() || 'Player 1';
     const p2 = $('d-p2').value.trim() || 'Player 2';
     const topic = $('d-topic').value.trim();
-    if (!topic) return alert('Enter a topic.');
+    if (!topic) return toast('Enter or roll a motion.');
     const rounds = parseInt($('d-rounds').value, 10);
     game = {
       mode: 'duel', topic, rounds, currentRound: 1, currentTurn: 0,
@@ -95,7 +146,6 @@
     $('round-info').textContent = `Round ${game.currentRound} / ${game.rounds}`;
 
     if (p.ai) {
-      // AI opponent auto-generates argument (placeholder since we use Claude only as judge)
       p.speeches.push(aiArgument(p, game));
       game.currentTurn++;
       nextTurn();
@@ -115,6 +165,7 @@
     $('speak-player').textContent = p.name;
     $('speak-side').textContent = p.side;
     $('speech').value = '';
+    $('mic-status').textContent = '';
     $('speech').focus();
     startTimer(120);
   });
@@ -134,6 +185,7 @@
 
   function submitSpeech() {
     clearInterval(timerInt);
+    stopRecognition();
     const p = game.players[game.currentTurn];
     const text = $('speech').value.trim() || '(no argument given)';
     p.speeches.push(text);
@@ -142,8 +194,71 @@
   }
   $('submit-speech').addEventListener('click', submitSpeech);
 
+  // --- Speech recognition (dictation) ---
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let recognizing = false;
+  let baseSpeechText = '';
+
+  function setupRecognition() {
+    if (!SR) return null;
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+    r.lang = navigator.language || 'en-US';
+    r.onresult = (e) => {
+      let interim = '', final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const tr = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += tr + ' ';
+        else interim += tr;
+      }
+      if (final) baseSpeechText += final;
+      $('speech').value = (baseSpeechText + interim).trimStart();
+    };
+    r.onerror = (e) => {
+      $('mic-status').textContent = 'Mic error: ' + e.error;
+      stopRecognition();
+    };
+    r.onend = () => {
+      if (recognizing) {
+        try { r.start(); } catch (_) { recognizing = false; updateMicUI(); }
+      }
+    };
+    return r;
+  }
+
+  function updateMicUI() {
+    const btn = $('mic-btn');
+    if (recognizing) { btn.classList.add('recording'); $('mic-status').textContent = '● Listening... tap mic to stop'; }
+    else { btn.classList.remove('recording'); }
+  }
+
+  function stopRecognition() {
+    if (recognition && recognizing) {
+      recognizing = false;
+      try { recognition.stop(); } catch (_) {}
+    }
+    updateMicUI();
+  }
+
+  $('mic-btn').addEventListener('click', () => {
+    if (!SR) { toast('Voice dictation not supported on this browser.'); return; }
+    if (!recognition) recognition = setupRecognition();
+    if (recognizing) { stopRecognition(); return; }
+    baseSpeechText = $('speech').value ? $('speech').value + ' ' : '';
+    recognizing = true;
+    try {
+      recognition.start();
+      updateMicUI();
+    } catch (e) {
+      recognizing = false;
+      toast('Could not start mic: ' + e.message);
+    }
+  });
+
   function aiArgument(p, g) {
-    return `[AI stance — ${p.side}] On "${g.topic}": evidence suggests this side holds because of clarity, precedent, and measurable impact. (Judge will still evaluate the human side on its own merits.)`;
+    return `[AI stance — ${p.side}] On "${g.topic}": evidence suggests this side holds because of clarity, precedent, and measurable impact.`;
   }
 
   // --- Results / Claude judging ---
@@ -154,7 +269,6 @@
     try {
       const verdict = await judgeWithClaude(game);
       renderVerdict(verdict);
-      // Save winners to leaderboard
       verdict.scores.forEach(s => {
         saveLB({ name: s.player, score: s.total, topic: game.topic, date: Date.now() });
       });
@@ -176,7 +290,6 @@
   }
 
   function fallbackJudge(g, err) {
-    // Local heuristic fallback (no API key / error)
     const scores = g.players.map(p => {
       const all = p.speeches.join(' ');
       const len = all.length;
@@ -189,7 +302,7 @@
     return {
       winner: scores[0].player,
       scores,
-      feedback: `(Local fallback judge — no Claude API available${err ? ': ' + err : ''}.)\nJudging was done by length/structure heuristic. Set your Claude API key in Settings for real AI judging based on JCI debating rules.`
+      feedback: `(Local fallback judge — Claude API unavailable${err ? ': ' + err : ''}.)\nSet your Claude API key in Settings and tap "Test API Key" to verify.`
     };
   }
 
@@ -212,7 +325,7 @@ Total = sum (0-100). Respect the JCI spirit: fairness, respect, growth.
 Return ONLY valid JSON in this exact schema:
 {"winner":"name","scores":[{"player":"name","argument":0,"evidence":0,"rebuttal":0,"delivery":0,"total":0}],"feedback":"2-4 sentences of constructive feedback citing the rules"}`;
 
-    const user = `Topic: ${g.topic}\nRounds: ${g.rounds}\n\nTranscript:\n${transcript}\n\nJudge now. JSON only.`;
+    const user = `Motion: ${g.topic}\nRounds: ${g.rounds}\n\nTranscript:\n${transcript}\n\nJudge now. JSON only.`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -229,11 +342,11 @@ Return ONLY valid JSON in this exact schema:
         messages: [{ role: 'user', content: user }]
       })
     });
-    if (!res.ok) throw new Error('API ' + res.status);
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error?.message || ('API ' + res.status));
     const text = data.content?.[0]?.text || '';
     const m = text.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('Bad response');
+    if (!m) throw new Error('Malformed judge response');
     return JSON.parse(m[0]);
   }
 })();

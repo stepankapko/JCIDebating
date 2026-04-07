@@ -13,30 +13,30 @@
     <!-- MAIN MENU -->
     <section id="menu" class="screen active">
       <header class="brand">
-        <div class="logo">JCI</div>
-        <h1>Debating Duel</h1>
-        <p class="tag">Train your voice. Sharpen your mind.</p>
+        <div class="logo"><span class="dot"></span>JCI</div>
+        <h1>Debating<br>Duel</h1>
+        <p class="tag">Train your voice · Sharpen your mind</p>
       </header>
       <nav class="menu-buttons">
         <button data-go="setup-single">Single Player</button>
-        <button data-go="setup-duel">Duel (2 Players)</button>
+        <button data-go="setup-duel">Duel · 2 Players</button>
         <button data-go="theory">Theory</button>
         <button data-go="leaderboard">Leaderboard</button>
         <button data-go="settings">Settings</button>
       </nav>
-      <footer class="foot">JCI Branding Guidelines · Active Citizens</footer>
+      <footer class="foot">JCI · Active Citizens · Be Better</footer>
     </section>
 
     <!-- THEORY -->
     <section id="theory" class="screen">
-      <button class="back" data-go="menu">&larr; Back</button>
+      <button class="back" data-go="menu">← Back</button>
       <h2>How to Debate</h2>
       <article class="theory-content">
         <h3>The Core Rules</h3>
         <ol>
           <li><b>Clarity</b> — State your position in one clean sentence.</li>
           <li><b>Evidence</b> — Back claims with facts, data or examples.</li>
-          <li><b>Logic</b> — Build arguments with cause &rarr; effect &rarr; impact.</li>
+          <li><b>Logic</b> — Build arguments with cause → effect → impact.</li>
           <li><b>Rebuttal</b> — Address the opponent's strongest point directly.</li>
           <li><b>Delivery</b> — Confident, structured, respectful tone.</li>
         </ol>
@@ -50,7 +50,7 @@
         <h3>JCI Spirit</h3>
         <p>Debate with respect. The goal is truth and growth, not humiliation.
         JCI members are Active Citizens — they listen, they learn, they lead.</p>
-        <h3>Scoring Criteria (used by the AI judge)</h3>
+        <h3>Scoring Criteria</h3>
         <ul>
           <li>Argument strength (0–25)</li>
           <li>Evidence &amp; examples (0–25)</li>
@@ -62,10 +62,15 @@
 
     <!-- SETUP SINGLE -->
     <section id="setup-single" class="screen">
-      <button class="back" data-go="menu">&larr; Back</button>
+      <button class="back" data-go="menu">← Back</button>
       <h2>Single Player</h2>
       <label>Your name <input id="s-name" type="text" placeholder="Name" /></label>
-      <label>Topic <input id="s-topic" type="text" placeholder="e.g. School uniforms should be mandatory" /></label>
+      <label>Motion
+        <div class="input-group">
+          <input id="s-topic" type="text" placeholder="e.g. School uniforms should be mandatory" />
+          <button class="icon accent" id="s-random" title="Random motion">🎲</button>
+        </div>
+      </label>
       <label>Your side
         <select id="s-side"><option>FOR</option><option>AGAINST</option></select>
       </label>
@@ -77,11 +82,16 @@
 
     <!-- SETUP DUEL -->
     <section id="setup-duel" class="screen">
-      <button class="back" data-go="menu">&larr; Back</button>
-      <h2>Duel on One Phone</h2>
-      <label>Player 1 <input id="d-p1" type="text" placeholder="Name (FOR)" /></label>
-      <label>Player 2 <input id="d-p2" type="text" placeholder="Name (AGAINST)" /></label>
-      <label>Topic <input id="d-topic" type="text" placeholder="Debate topic" /></label>
+      <button class="back" data-go="menu">← Back</button>
+      <h2>Duel · One Phone</h2>
+      <label>Player 1 (FOR) <input id="d-p1" type="text" placeholder="Name" /></label>
+      <label>Player 2 (AGAINST) <input id="d-p2" type="text" placeholder="Name" /></label>
+      <label>Motion
+        <div class="input-group">
+          <input id="d-topic" type="text" placeholder="Debate motion" />
+          <button class="icon accent" id="d-random" title="Random motion">🎲</button>
+        </div>
+      </label>
       <label>Rounds
         <select id="d-rounds"><option>1</option><option selected>2</option><option>3</option></select>
       </label>
@@ -92,22 +102,24 @@
     <section id="game" class="screen">
       <div class="game-header">
         <div id="round-info">Round 1 / 2</div>
-        <div id="topic-info">Topic</div>
+        <div id="topic-info">Motion</div>
       </div>
       <div id="turn-card">
-        <h2 id="turn-player">Player</h2>
-        <p id="turn-side">FOR</p>
+        <h2 id="turn-player" style="margin:0">Player</h2>
+        <p id="turn-side" class="side-badge">FOR</p>
         <p class="hint">Pass the phone. Tap ready when it's your turn.</p>
-        <button class="primary" id="ready-btn">Ready</button>
+        <button class="primary" id="ready-btn">I'm Ready</button>
       </div>
       <div id="speak-card" class="hidden">
-        <h3 id="speak-player">Player</h3>
+        <h3 id="speak-player" style="margin-top:0">Player</h3>
         <p id="speak-side" class="side-badge">FOR</p>
-        <textarea id="speech" rows="8" placeholder="Type your argument..."></textarea>
-        <div class="row">
-          <span id="timer">02:00</span>
+        <textarea id="speech" rows="8" placeholder="Speak or type your argument..."></textarea>
+        <div class="speech-toolbar">
+          <button class="icon mic" id="mic-btn" title="Dictate">🎤</button>
+          <span id="timer" style="margin-left:auto">02:00</span>
           <button class="primary" id="submit-speech">Submit</button>
         </div>
+        <div id="mic-status"></div>
       </div>
     </section>
 
@@ -116,33 +128,33 @@
       <h2>The Judge Has Spoken</h2>
       <div id="verdict-loading" class="hidden">
         <div class="spinner"></div>
-        <p>Claude is judging...</p>
+        <p class="hint" style="text-align:center">Claude is judging...</p>
       </div>
       <div id="verdict-content">
         <div id="winner-banner"></div>
         <div id="scores"></div>
         <div id="feedback"></div>
       </div>
-      <button class="primary" data-go="menu">Main Menu</button>
+      <button class="primary" data-go="menu" style="margin-top:18px;width:100%">Main Menu</button>
     </section>
 
     <!-- LEADERBOARD -->
     <section id="leaderboard" class="screen">
-      <button class="back" data-go="menu">&larr; Back</button>
+      <button class="back" data-go="menu">← Back</button>
       <h2>Leaderboard</h2>
       <table id="lb-table">
-        <thead><tr><th>#</th><th>Name</th><th>Score</th><th>Topic</th></tr></thead>
+        <thead><tr><th>#</th><th>Name</th><th>Score</th><th>Motion</th></tr></thead>
         <tbody></tbody>
       </table>
-      <button id="clear-lb">Clear Leaderboard</button>
+      <button class="ghost" id="clear-lb" style="margin-top:14px;width:100%">Clear Leaderboard</button>
     </section>
 
     <!-- SETTINGS -->
     <section id="settings" class="screen">
-      <button class="back" data-go="menu">&larr; Back</button>
+      <button class="back" data-go="menu">← Back</button>
       <h2>Settings</h2>
       <label>Claude API Key
-        <input id="api-key" type="password" placeholder="sk-ant-..." />
+        <input id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off" />
       </label>
       <p class="hint">Stored locally on this device only. Used to call Claude as judge.</p>
       <label>Model
@@ -152,14 +164,19 @@
           <option value="claude-haiku-4-5-20251001">claude-haiku-4-5</option>
         </select>
       </label>
-      <button class="primary" id="save-settings">Save</button>
+      <button class="primary" id="save-settings" style="width:100%">Save</button>
+      <button class="ghost" id="test-api" style="width:100%;margin-top:10px">Test API Key</button>
+      <div id="api-test-result" class="hint" style="margin-top:10px;text-align:center;min-height:20px"></div>
     </section>
   </div>
+
+  <div id="toast"></div>
 
   <script type="importmap">
   { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
   </script>
   <script type="module" src="bg.js"></script>
+  <script src="motions.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
